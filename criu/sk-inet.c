@@ -124,6 +124,14 @@ static int can_dump_ipproto(unsigned int ino, int proto, int type)
 	if (type == SOCK_RAW)
 		return 1;
 
+	/* MPTCP sockets are allowed but always restore as CLOSED.
+	 * The kernel lacks MPTCP_REPAIR API (similar to TCP_REPAIR),
+	 * so connection state cannot be preserved during checkpoint. */
+	if (proto == IPPROTO_MPTCP) {
+		pr_warn("MPTCP socket %x: No kernel checkpoint support, will restore as CLOSED (connections must reconnect)\n", ino);
+		return 1;
+	}
+
 	/* Make sure it's a proto we support */
 	switch (proto) {
 	case IPPROTO_IP:
