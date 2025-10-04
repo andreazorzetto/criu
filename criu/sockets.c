@@ -155,7 +155,7 @@ static inline enum socket_cl_bits get_collect_bit_nr(unsigned int family, unsign
 	if (family == AF_PACKET)
 		return PACKET_CL_BIT;
 	if (family == AF_INET) {
-		if (proto == IPPROTO_TCP)
+		if (proto == IPPROTO_TCP || proto == IPPROTO_MPTCP)
 			return INET_TCP_CL_BIT;
 		if (proto == IPPROTO_UDP)
 			return INET_UDP_CL_BIT;
@@ -167,7 +167,7 @@ static inline enum socket_cl_bits get_collect_bit_nr(unsigned int family, unsign
 			return INET_ICMP_CL_BIT;
 	}
 	if (family == AF_INET6) {
-		if (proto == IPPROTO_TCP)
+		if (proto == IPPROTO_TCP || proto == IPPROTO_MPTCP)
 			return INET6_TCP_CL_BIT;
 		if (proto == IPPROTO_UDP)
 			return INET6_UDP_CL_BIT;
@@ -637,6 +637,13 @@ int do_dump_opt(int sk, int level, int name, void *val, int len)
 	socklen_t aux = len;
 
 	if (getsockopt(sk, level, name, val, &aux) < 0) {
+		/* MPTCP sockets don't support all TCP socket options.
+		 * Skip unsupported options gracefully - they won't be restored anyway
+		 * since MPTCP connections always close during checkpoint. */
+		if (errno == EOPNOTSUPP) {
+			memset(val, 0, len);
+			return 0;
+		}
 		pr_perror("Can't get %d:%d opt", level, name);
 		return -1;
 	}
