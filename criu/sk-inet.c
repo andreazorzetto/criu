@@ -942,7 +942,7 @@ static int open_inet_sk(struct file_desc *d, int *new_fd)
 	 * bind() and listen(), and that's all.
 	 */
 	if (ie->state == TCP_LISTEN) {
-		if (ie->proto != IPPROTO_TCP) {
+		if (ie->proto != IPPROTO_TCP && ie->proto != IPPROTO_MPTCP) {
 			pr_err("Wrong socket in listen state %d\n", ie->proto);
 			goto err;
 		}
@@ -970,11 +970,11 @@ done:
 	if (restore_socket_opts(sk, ie->opts))
 		goto err;
 
-	if (ie->proto == IPPROTO_TCP && restore_tcp_opts(sk, ie->tcp_opts))
+	if ((ie->proto == IPPROTO_TCP || ie->proto == IPPROTO_MPTCP) && restore_tcp_opts(sk, ie->tcp_opts))
 		goto err;
 
 	if (ie->has_shutdown &&
-	    (ie->proto == IPPROTO_UDP || ie->proto == IPPROTO_UDPLITE || ie->proto == IPPROTO_TCP)) {
+	    (ie->proto == IPPROTO_UDP || ie->proto == IPPROTO_UDPLITE || ie->proto == IPPROTO_TCP || ie->proto == IPPROTO_MPTCP)) {
 		if (shutdown(sk, sk_decode_shutdown(ie->shutdown))) {
 			if (ie->state != TCP_CLOSE && errno != ENOTCONN) {
 				pr_perror("Can't shutdown socket into %d", sk_decode_shutdown(ie->shutdown));
