@@ -471,6 +471,22 @@ int sk_collect_one(unsigned ino, int family, struct socket_desc *d, struct ns_id
 int do_restore_opt(int sk, int level, int name, void *val, int len)
 {
 	if (setsockopt(sk, level, name, val, len) < 0) {
+		int err = errno;
+
+		/*
+		 * MPTCP sockets (proto 262) don't support many socket options
+		 * that regular TCP sockets support. If we get ENOPROTOOPT or
+		 * EOPNOTSUPP, log a warning but don't fail the restore.
+		 *
+		 * This allows MPTCP connections to close gracefully during restore
+		 * rather than failing completely.
+		 */
+		if (err == ENOPROTOOPT || err == EOPNOTSUPP) {
+			pr_warn("Skipping unsupported socket option %d:%d (len %d) - likely MPTCP socket\n",
+				level, name, len);
+			return 0;
+		}
+
 		pr_perror("Can't set %d:%d (len %d)", level, name, len);
 		return -1;
 	}
