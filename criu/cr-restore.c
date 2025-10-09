@@ -2950,7 +2950,9 @@ static struct thread_creds_args *rst_prep_creds_args(CredsEntry *ce, unsigned lo
 	if (ce->lsm_profile || opts.lsm_supplied) {
 		char *rendered = NULL, *profile;
 
-		profile = ce->lsm_profile;
+		/* Prefer command-line/config LSM profile over checkpoint metadata */
+		/* Note: opts.lsm_profile is NULL when "--lsm-profile none:" was specified */
+		profile = opts.lsm_supplied ? NULL : ce->lsm_profile;
 
 		if (validate_lsm(profile) < 0)
 			return ERR_PTR(-EINVAL);
@@ -2985,7 +2987,9 @@ static struct thread_creds_args *rst_prep_creds_args(CredsEntry *ce, unsigned lo
 		char *rendered = NULL;
 		char *profile;
 
-		profile = ce->lsm_sockcreate;
+		/* Prefer command-line/config LSM profile over checkpoint metadata */
+		/* Note: opts.lsm_profile is NULL when "--lsm-profile none:" was specified */
+		profile = opts.lsm_supplied ? NULL : ce->lsm_sockcreate;
 
 		if (validate_lsm(profile) < 0)
 			return ERR_PTR(-EINVAL);
