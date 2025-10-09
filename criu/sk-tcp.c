@@ -461,6 +461,21 @@ int restore_one_tcp(int fd, struct inet_sk_info *ii)
 
 	pr_info("Restoring TCP connection\n");
 
+	/*
+	 * MPTCP sockets don't support TCP_REPAIR operations (no MPTCP_REPAIR kernel API).
+	 * Attempting TCP_REPAIR on MPTCP sockets returns ENOTTY (-52).
+	 * Skip libsoccr restore and just close the connections.
+	 */
+	if (ii->ie->proto == IPPROTO_MPTCP) {
+		pr_warn("MPTCP socket detected (id %x ino %x): skipping TCP_REPAIR restore (connections will be CLOSED)\n",
+			ii->ie->id, ii->ie->ino);
+		if (shutdown(fd, SHUT_RDWR) && errno != ENOTCONN) {
+			pr_perror("Unable to shutdown MPTCP socket id %x ino %x", ii->ie->id, ii->ie->ino);
+			return -1;
+		}
+		return 0;
+	}
+
 	if (opts.tcp_close) {
 		if (shutdown(fd, SHUT_RDWR) && errno != ENOTCONN) {
 			pr_perror("Unable to shutdown the socket id %x ino %x", ii->ie->id, ii->ie->ino);
